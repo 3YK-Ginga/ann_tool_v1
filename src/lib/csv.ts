@@ -10,24 +10,14 @@ export function escapeCsvField(value: string): string {
   return `"${escaped}"`;
 }
 
-export function buildTextCsv(segments: Segment[]): string {
-  const lines = ["start,end,text"];
-  for (const segment of segments) {
-    const start = formatMs(segment.start_ms);
-    const end = formatMs(segment.end_ms);
-    const text = escapeCsvField(segment.text);
-    lines.push(`${start},${end},${text}`);
-  }
-  return lines.join("\n");
-}
-
-export function buildLabelCsv(segments: Segment[]): string {
-  const lines = ["start,end,label"];
+export function buildSegmentCsv(segments: Segment[]): string {
+  const lines = ["start,end,label,text"];
   for (const segment of segments) {
     const start = formatMs(segment.start_ms);
     const end = formatMs(segment.end_ms);
     const label = segment.label_id == null ? "" : `${segment.label_id}`;
-    lines.push(`${start},${end},${label}`);
+    const text = escapeCsvField(segment.text);
+    lines.push(`${start},${end},${label},${text}`);
   }
   return lines.join("\n");
 }

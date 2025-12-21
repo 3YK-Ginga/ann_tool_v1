@@ -5,7 +5,7 @@ import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import VideoControls from "./components/VideoControls";
 import TimelineCanvas from "./components/TimelineCanvas";
 import StatusBar from "./components/StatusBar";
-import { buildLabelCsv, buildTextCsv } from "./lib/csv";
+import { buildSegmentCsv } from "./lib/csv";
 import { buildAnnProject, parseAnnFile } from "./lib/ann";
 import { parseLabelsXml } from "./lib/labels";
 import { getBaseName, getFileName } from "./lib/path";
@@ -226,27 +226,16 @@ export default function App() {
     }
     const sorted = sortSegments(segments);
     const base = `${getBaseName(exportName)}_${role}`;
-    const textCsv = buildTextCsv(sorted);
-    const labelCsv = buildLabelCsv(sorted);
+    const csv = buildSegmentCsv(sorted);
 
-    const textPath = await save({
-      defaultPath: `${base}_text.csv`,
+    const csvPath = await save({
+      defaultPath: `${base}.csv`,
       filters: [{ name: "CSV", extensions: ["csv"] }]
     });
-    if (!textPath) {
+    if (!csvPath) {
       return;
     }
-    await writeTextFile(textPath, textCsv);
-
-    const labelPath = await save({
-      defaultPath: `${base}_label.csv`,
-      filters: [{ name: "CSV", extensions: ["csv"] }]
-    });
-    if (!labelPath) {
-      showStatus("warning", "ラベルCSVの保存がキャンセルされました。");
-      return;
-    }
-    await writeTextFile(labelPath, labelCsv);
+    await writeTextFile(csvPath, csv);
     showStatus("info", "CSVを書き出しました。");
   };
 
