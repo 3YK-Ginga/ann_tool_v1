@@ -13,6 +13,23 @@ import { clampMs } from "./lib/time";
 import { isSegmentComplete, sortSegments } from "./lib/segments";
 import { Label, Role, Segment } from "./lib/types";
 
+const pickSinglePath = (value: string | string[] | null): string | null => {
+  if (!value) {
+    return null;
+  }
+  return Array.isArray(value) ? value[0] ?? null : value;
+};
+
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (typeof error === "string") {
+    return error;
+  }
+  return "不明なエラーが発生しました。";
+};
+
 interface StatusMessage {
   id: string;
   type: "error" | "warning" | "info";
@@ -57,10 +74,29 @@ export default function App() {
     toastTimersRef.current.set(id, timer);
   };
 
+  const showError = (context: string, error: unknown) => {
+    showStatus("error", `${context}: ${getErrorMessage(error)}`);
+  };
+
   useEffect(() => {
     return () => {
       toastTimersRef.current.forEach((timer) => window.clearTimeout(timer));
       toastTimersRef.current.clear();
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      showStatus("error", `エラーが発生しました: ${event.message}`);
+    };
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      showStatus("error", `処理に失敗しました: ${getErrorMessage(event.reason)}`);
+    };
+    window.addEventListener("error", handleError);
+    window.addEventListener("unhandledrejection", handleRejection);
+    return () => {
+      window.removeEventListener("error", handleError);
+      window.removeEventListener("unhandledrejection", handleRejection);
     };
   }, []);
 
@@ -90,57 +126,87 @@ export default function App() {
   }, [canUseTimeline, stepMs, currentMs, durationMs]);
 
   const handleOpenVideo = async () => {
-    const selected = await open({
-      multiple: false,
-      filters: [
-        {
-          name: "Video",
-          extensions: ["mp4", "mov", "mkv", "webm", "avi"]
-        }
-      ]
-    });
-    if (!selected || Array.isArray(selected)) {
-      return;
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [
+          {
+            name: "Video",
+            extensions: ["mp4", "mov", "mkv", "webm", "avi"]
+          }
+        ]
+      });
+      const filePath = pickSinglePath(selected);
+      if (!filePath) {
+        return;
+      }
+      const fileName = getFileName(filePath);
+      setVideoPath(filePath);
+      setVideoFileName(fileName);
+      setVideoSrc(convertFileSrc(filePath));
+      setDurationMs(0);
+      setCurrentMs(0);
+      setPlaybackEndMs(null);
+      showStatus("info", `動画を読み込みました: ${fileName}`);
+    } catch (error) {
+      showError("動画の読み込みに失敗しました", error);
     }
-    const filePath = selected;
-    const fileName = getFileName(filePath);
-    setVideoPath(filePath);
-    setVideoFileName(fileName);
-    setVideoSrc(convertFileSrc(filePath));
-    setDurationMs(0);
-    setCurrentMs(0);
-    setPlaybackEndMs(null);
-    showStatus("info", `動画を読み込みました: ${fileName}`);
   };
 
   const handleOpenLabels = async () => {
-    const selected = await open({
-      multiple: false,
-      filters: [{ name: "Labels", extensions: ["xml"] }]
-    });
-    if (!selected || Array.isArray(selected)) {
+    let filePath: string | null = null;
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [{ name: "Labels", extensions: ["xml"] }]
+      });
+      filePath = pickSinglePath(selected);
+    } catch (error) {
+      showError("labels.xmlの選択に失敗しました", error);
       return;
     }
-    const xmlText = await readTextFile(selected);
+    if (!filePath) {
+      return;
+    }
+    let xmlText: string;
+    try {
+      xmlText = await readTextFile(filePath);
+    } catch (error) {
+      showError("labels.xmlの読み込みに失敗しました", error);
+      return;
+    }
     const result = parseLabelsXml(xmlText);
     if (result.error) {
       showStatus("error", result.error);
       return;
     }
     setLabels(result.labels);
-    setLabelsPath(selected);
+    setLabelsPath(filePath);
     showStatus("info", "labels.xmlを読み込みました。");
   };
 
   const handleOpenAnn = async () => {
-    const selected = await open({
-      multiple: false,
-      filters: [{ name: "Annotation", extensions: ["ann"] }]
-    });
-    if (!selected || Array.isArray(selected)) {
+    let filePath: string | null = null;
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [{ name: "Annotation", extensions: ["ann"] }]
+      });
+      filePath = pickSinglePath(selected);
+    } catch (error) {
+      showError("annの選択に失敗しました", error);
       return;
     }
-    const text = await readTextFile(selected);
+    if (!filePath) {
+      return;
+    }
+    let text: string;
+    try {
+      text = await readTextFile(filePath);
+    } catch (error) {
+      showError("annの読み込みに失敗しました", error);
+      return;
+    }
     const result = parseAnnFile(text);
     if (result.error || !result.data) {
       showStatus("error", result.error ?? "annの読み込みに失敗しました。");
@@ -203,15 +269,26 @@ export default function App() {
     }
     const ann = buildAnnProject(videoPath, labelsPath, role, segments);
     const defaultName = `${getBaseName(getFileName(videoPath))}_${role}.ann`;
-    const path = await save({
-      defaultPath: defaultName,
-      filters: [{ name: "Annotation", extensions: ["ann"] }]
-    });
+    let path: string | null = null;
+    try {
+      const selected = await save({
+        defaultPath: defaultName,
+        filters: [{ name: "Annotation", extensions: ["ann"] }]
+      });
+      path = pickSinglePath(selected);
+    } catch (error) {
+      showError("annの保存先選択に失敗しました", error);
+      return;
+    }
     if (!path) {
       return;
     }
-    await writeTextFile(path, JSON.stringify(ann, null, 2));
-    showStatus("info", `annを保存しました: ${path}`);
+    try {
+      await writeTextFile(path, JSON.stringify(ann, null, 2));
+      showStatus("info", `annを保存しました: ${path}`);
+    } catch (error) {
+      showError("annの保存に失敗しました", error);
+    }
   };
 
   const handleExportCsv = async () => {
@@ -228,15 +305,26 @@ export default function App() {
     const base = `${getBaseName(exportName)}_${role}`;
     const csv = buildSegmentCsv(sorted);
 
-    const csvPath = await save({
-      defaultPath: `${base}.csv`,
-      filters: [{ name: "CSV", extensions: ["csv"] }]
-    });
+    let csvPath: string | null = null;
+    try {
+      const selected = await save({
+        defaultPath: `${base}.csv`,
+        filters: [{ name: "CSV", extensions: ["csv"] }]
+      });
+      csvPath = pickSinglePath(selected);
+    } catch (error) {
+      showError("CSVの保存先選択に失敗しました", error);
+      return;
+    }
     if (!csvPath) {
       return;
     }
-    await writeTextFile(csvPath, csv);
-    showStatus("info", "CSVを書き出しました。");
+    try {
+      await writeTextFile(csvPath, csv);
+      showStatus("info", "CSVを書き出しました。");
+    } catch (error) {
+      showError("CSVの書き出しに失敗しました", error);
+    }
   };
 
   const handleTogglePlay = async () => {
@@ -246,10 +334,14 @@ export default function App() {
       return;
     }
     setPlaybackEndMs(null);
-    if (video.paused) {
-      await video.play();
-    } else {
-      video.pause();
+    try {
+      if (video.paused) {
+        await video.play();
+      } else {
+        video.pause();
+      }
+    } catch (error) {
+      showError("再生に失敗しました", error);
     }
   };
 
@@ -281,7 +373,11 @@ export default function App() {
     }
     video.currentTime = startMs / 1000;
     setPlaybackEndMs(endMs);
-    await video.play();
+    try {
+      await video.play();
+    } catch (error) {
+      showError("区間再生に失敗しました", error);
+    }
   };
 
   const syncVideoMetadata = () => {

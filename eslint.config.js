@@ -5,6 +5,14 @@ import pluginReact from "eslint-plugin-react";
 
 export default [
   {
+    ignores: [
+      "dist/**",
+      "node_modules/**",
+      "src-tauri/target/**",
+      "src-tauri/gen/**"
+    ]
+  },
+  {
     files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
     languageOptions: { globals: globals.browser }
   },

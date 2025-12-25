@@ -21,6 +21,7 @@ const TRACK_TOP = TICK_AREA_HEIGHT + LABEL_BADGE_HEIGHT + LABEL_PADDING;
 const TRACK_HEIGHT = 44;
 const HANDLE_WIDTH = 10;
 const TIMELINE_HEIGHT = TRACK_TOP + TRACK_HEIGHT + 32;
+const MAX_TIMELINE_WIDTH = 16000;
 
 const TICK_STEPS = [0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120];
 const MIN_TICK_PX = 60;
@@ -119,7 +120,14 @@ export default function TimelineCanvas({
   const pendingClickRef = useRef<number | null>(null);
   const pendingClickIdRef = useRef<string | null>(null);
 
-  const pixelsPerSecond = Math.max(8, Math.min(200, (1000 / stepMs) * 6));
+  const desiredPixelsPerSecond = Math.max(8, Math.min(200, (1000 / stepMs) * 6));
+  const desiredTimelineWidth =
+    durationMs > 0 ? (durationMs / 1000) * desiredPixelsPerSecond : viewportWidth;
+  const widthScale =
+    durationMs > 0 && desiredTimelineWidth > MAX_TIMELINE_WIDTH
+      ? MAX_TIMELINE_WIDTH / desiredTimelineWidth
+      : 1;
+  const pixelsPerSecond = desiredPixelsPerSecond * widthScale;
   const timelineWidth = Math.max(
     viewportWidth,
     durationMs > 0 ? (durationMs / 1000) * pixelsPerSecond : viewportWidth
@@ -586,6 +594,8 @@ export default function TimelineCanvas({
       setContextMenu(null);
       return;
     }
+    setContextMenuPos(null);
+    setLabelMenuPos(null);
     setContextMenu({
       x: event.clientX,
       y: event.clientY,
