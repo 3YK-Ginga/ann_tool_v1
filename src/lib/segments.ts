@@ -38,12 +38,17 @@ function getNeighborsForInsert(segments: Segment[], startMs: number): {
   let prevEnd: number | null = null;
   let nextStart: number | null = null;
   for (const seg of segments) {
-    if (seg.end_ms <= startMs) {
+    if (startMs < seg.start_ms) {
+      nextStart = seg.start_ms;
+      break;
+    }
+    if (startMs >= seg.start_ms && startMs < seg.end_ms) {
       prevEnd = seg.end_ms;
       continue;
     }
-    nextStart = seg.start_ms;
-    break;
+    if (seg.end_ms <= startMs) {
+      prevEnd = seg.end_ms;
+    }
   }
   return { prevEnd, nextStart };
 }

@@ -1,7 +1,7 @@
 {
   "name": "ann-tool-v1",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "test": "vitest",
+    "test:ci": "vitest run",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "typecheck": "tsc -b --noEmit"
@@ -30,6 +31,7 @@
     "eslint": "^9.39.2",
     "eslint-plugin-react": "^7.37.5",
     "globals": "^16.5.0",
+    "jsdom": "^27.3.0",
     "typescript": "^5.2.2",
     "typescript-eslint": "^8.50.1",
     "vite": "^7.3.0",
