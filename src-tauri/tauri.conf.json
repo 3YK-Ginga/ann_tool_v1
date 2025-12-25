@@ -28,13 +28,7 @@
   },
   "bundle": {
     "active": true,
-    "icon": ["icons/icon.ico"],
-    "windows": {
-      "webviewInstallMode": {
-        "type": "fixedRuntime",
-        "path": "webview2-fixed"
-      }
-    }
+    "icon": ["icons/icon.ico"]
   },
   "plugins": {
     "dialog": null,

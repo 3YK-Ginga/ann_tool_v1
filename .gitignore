@@ -4,7 +4,6 @@ dist-ssr/
 .vite/
 
 src-tauri/target/
-src-tauri/webview2-fixed/
 
 *.log
 npm-debug.log*
