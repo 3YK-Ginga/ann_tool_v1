@@ -323,8 +323,11 @@ export default function TimelineCanvas({
       y = margin;
     }
 
-    if (!labelMenuPos || labelMenuPos.x !== x || labelMenuPos.y !== y) {
-      setLabelMenuPos({ x, y });
+    const nextX = Math.round(x);
+    const nextY = Math.round(y);
+
+    if (!labelMenuPos || labelMenuPos.x !== nextX || labelMenuPos.y !== nextY) {
+      setLabelMenuPos({ x: nextX, y: nextY });
     }
   }, [contextMenu, labelMenuPos]);
 
@@ -350,8 +353,15 @@ export default function TimelineCanvas({
       y = margin;
     }
 
-    if (!contextMenuPos || contextMenuPos.x !== x || contextMenuPos.y !== y) {
-      setContextMenuPos({ x, y });
+    const nextX = Math.round(x);
+    const nextY = Math.round(y);
+
+    if (
+      !contextMenuPos ||
+      contextMenuPos.x !== nextX ||
+      contextMenuPos.y !== nextY
+    ) {
+      setContextMenuPos({ x: nextX, y: nextY });
     }
   }, [contextMenu, contextMenuPos]);
 
@@ -664,8 +674,8 @@ export default function TimelineCanvas({
                     labels && labels.length > 0
                       ? (setContextMenu({ ...contextMenu, view: "labels" }),
                         setLabelMenuPos({
-                          x: (contextMenuPos?.x ?? contextMenu.x) + 200,
-                          y: contextMenuPos?.y ?? contextMenu.y
+                          x: Math.round((contextMenuPos?.x ?? contextMenu.x) + 200),
+                          y: Math.round(contextMenuPos?.y ?? contextMenu.y)
                         }))
                       : undefined
                   }
